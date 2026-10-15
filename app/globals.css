@@ -1,26 +1,135 @@
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&family=Caveat:wght@500;600;700&family=Charm:wght@400;700&family=Dancing+Script:wght@500;600;700&display=swap');
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  background-color: #0d060a;
+  color: #65485B;
+  font-family: 'Be Vietnam Pro', sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+.font-handwritten {
+  font-family: 'Caveat', 'Dancing Script', 'Charm', cursive, sans-serif;
+}
+
+.font-handwritten-vn {
+  font-family: 'Dancing Script', 'Charm', cursive, sans-serif;
+}
+
+.font-vietnam {
+  font-family: 'Be Vietnam Pro', sans-serif;
+}
+
+.glass-card {
+  background: rgba(255, 247, 251, 0.52);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: 20px;
+  box-shadow:
+    0 8px 32px rgba(111, 65, 91, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  overflow: hidden;
+  transition: box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card:hover {
+  box-shadow:
+    0 20px 48px rgba(111, 65, 91, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  border-color: rgba(255, 255, 255, 0.95);
+}
+
+/* Lenis Smooth Scroll CSS Rules */
+html.lenis, html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis.lenis-scrolling iframe {
+  pointer-events: none;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(244, 175, 203, 0.5), 0 0 40px rgba(248, 200, 220, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 32px rgba(244, 175, 203, 0.8), 0 0 65px rgba(248, 200, 220, 0.5);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.cta-glow {
+  animation: pulseGlow 3.5s ease-in-out infinite;
 }
+
+@keyframes scaleUp {
+  0% {
+    opacity: 0;
+    transform: scale(0.94) translateY(18px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-scaleUp {
+  animation: scaleUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Custom delicate scrollbar for letter modal */
+.custom-letter-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(214, 137, 168, 0.6) rgba(255, 240, 246, 0.4);
+}
+
+.custom-letter-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-letter-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 240, 246, 0.4);
+  border-radius: 999px;
+}
+.custom-letter-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(214, 137, 168, 0.55);
+  border-radius: 999px;
+}
+.custom-letter-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(188, 88, 130, 0.85);
+}
+
