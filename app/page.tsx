@@ -10,7 +10,7 @@ const FRAME_PREFIX = "/frames/ezgif-frame-";
 
 function getFrameUrl(index: number): string {
   const frameNumber = String(index + 1).padStart(3, "0");
-  return `${FRAME_PREFIX}${frameNumber}.png`;
+  return `${FRAME_PREFIX}${frameNumber}.webp`;
 }
 
 interface CardItem {
@@ -26,7 +26,7 @@ const SECTION_02_CARDS: CardItem[] = [
   {
     id: "01",
     title: "1. Your Gentle Heart",
-    image: "/card-gentle-heart.jpg",
+    image: "/card-gentle-heart.webp",
     alt: "Hoa hồng hồng phấn mềm mại",
     desc: "Sự dịu dàng không làm bạn yếu đuối. Nó là vẻ đẹp của một trái tim biết quan tâm, thấu hiểu và yêu thương.",
     quote: "“Dịu dàng, nhưng chẳng hề nhỏ bé.”",
@@ -34,7 +34,7 @@ const SECTION_02_CARDS: CardItem[] = [
   {
     id: "02",
     title: "2. Your Inner Light",
-    image: "/card-inner-light.jpg",
+    image: "/card-inner-light.webp",
     alt: "Hoa lavender tím nhạt",
     desc: "Bạn có ánh sáng của riêng mình. Chẳng cần trở thành ai khác, bạn vẫn có thể tỏa sáng theo cách rất riêng.",
     quote: "“Bạn là phiên bản không thể thay thế.”",
@@ -42,7 +42,7 @@ const SECTION_02_CARDS: CardItem[] = [
   {
     id: "03",
     title: "3. Your Quiet Strength",
-    image: "/card-quiet-strength.jpg",
+    image: "/card-quiet-strength.webp",
     alt: "Hoa trắng dưới ánh nắng sớm",
     desc: "Phía sau nụ cười có thể là bao nỗ lực. Mong bạn luôn nhớ rằng mình mạnh mẽ, và cũng xứng đáng được chở che.",
     quote: "“Mạnh mẽ và được yêu thương.”",
@@ -50,7 +50,7 @@ const SECTION_02_CARDS: CardItem[] = [
   {
     id: "04",
     title: "4. Your Little Joys",
-    image: "/card-little-joys.jpg",
+    image: "/card-little-joys.webp",
     alt: "Hoa cúc trắng nhỏ trên cỏ xanh",
     desc: "Những niềm vui bé xíu, những ước mơ còn dang dở, những ngày bình yên — tất cả đều xứng đáng có một chỗ trong cuộc đời bạn.",
     quote: "“Hạnh phúc theo cách của riêng mình.”",
@@ -149,6 +149,10 @@ export default function Home() {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const lenisRef = useRef<Lenis | null>(null);
+
+  // Progressive image loading states
+  const [loadProgress, setLoadProgress] = useState(0);
+  const [isReady, setIsReady] = useState(false);
 
   // Section 01 Hero elements refs
   const heroContentRef = useRef<HTMLDivElement>(null);
@@ -497,11 +501,16 @@ export default function Home() {
       });
     }
 
-    // 6. Canvas image sequence handling (300 frames)
-    const images: HTMLImageElement[] = new Array(TOTAL_FRAMES);
+    // 6. Intelligent Progressive Sequence Loader (300 WebP frames)
+    const images: (HTMLImageElement | null)[] = new Array(TOTAL_FRAMES).fill(null);
     const loadedStatus: boolean[] = new Array(TOTAL_FRAMES).fill(false);
+    const requestedStatus: boolean[] = new Array(TOTAL_FRAMES).fill(false);
     let currentTargetFrame = 0;
     let lastRenderedFrame = -1;
+    let activeDownloads = 0;
+    const MAX_CONCURRENT_DOWNLOADS = 6;
+    let isMounted = true;
+    let totalLoadedCount = 0;
 
     const drawCoverImage = (img: HTMLImageElement) => {
       const cw = canvas.width;
@@ -522,10 +531,12 @@ export default function Home() {
     const renderFrame = (index: number) => {
       currentTargetFrame = index;
 
+      // 1. Direct frame hit
       let targetImg: HTMLImageElement | null = null;
       if (images[index] && loadedStatus[index]) {
         targetImg = images[index];
       } else {
+        // 2. Nearest loaded fallback (bidirectional scan)
         for (let offset = 1; offset < TOTAL_FRAMES; offset++) {
           const prev = index - offset;
           if (prev >= 0 && images[prev] && loadedStatus[prev]) {
@@ -544,6 +555,99 @@ export default function Home() {
         drawCoverImage(targetImg);
         lastRenderedFrame = index;
       }
+
+      // Proactively trigger loads around newly scrolled position
+      scheduleNextLoads();
+    };
+
+    const loadSingleFrame = (index: number) => {
+      if (index < 0 || index >= TOTAL_FRAMES || requestedStatus[index]) {
+        return;
+      }
+
+      requestedStatus[index] = true;
+      activeDownloads++;
+
+      const img = new Image();
+      img.src = getFrameUrl(index);
+      images[index] = img;
+
+      const onFinish = () => {
+        activeDownloads--;
+        if (isMounted) {
+          scheduleNextLoads();
+        }
+      };
+
+      img.onload = () => {
+        loadedStatus[index] = true;
+        totalLoadedCount++;
+
+        // Initial readiness feedback
+        const pct = Math.min(100, Math.round((totalLoadedCount / 28) * 100));
+        setLoadProgress(pct);
+        if (totalLoadedCount >= 18) {
+          setIsReady(true);
+        }
+
+        if (isMounted && (lastRenderedFrame === -1 || Math.abs(currentTargetFrame - index) <= 1)) {
+          renderFrame(currentTargetFrame);
+        }
+        onFinish();
+      };
+
+      img.onerror = () => {
+        onFinish();
+      };
+    };
+
+    // Priority scheduler:
+    // 1. Current frame & ±14 adjacent frames (immediate viewport buffer)
+    // 2. Section landmark frames (0, 110, 190, 280, 299)
+    // 3. Keyframes (every 6th frame across timeline for continuous motion scaffolding)
+    // 4. Remaining frames ordered by distance to current view
+    const getNextFrameToLoad = (): number | null => {
+      // 1. High priority: window around current target frame
+      for (let offset = 0; offset <= 14; offset++) {
+        const forward = currentTargetFrame + offset;
+        if (forward < TOTAL_FRAMES && !requestedStatus[forward]) return forward;
+        const backward = currentTargetFrame - offset;
+        if (backward >= 0 && !requestedStatus[backward]) return backward;
+      }
+
+      // 2. Section landmarks
+      const landmarks = [0, 110, 190, 280, 299];
+      for (const lm of landmarks) {
+        if (!requestedStatus[lm]) return lm;
+      }
+
+      // 3. Keyframe scaffolding across whole sequence (every 6th frame)
+      for (let i = 0; i < TOTAL_FRAMES; i += 6) {
+        if (!requestedStatus[i]) return i;
+      }
+
+      // 4. Closest remaining frame
+      let closest: number | null = null;
+      let minDistance = Infinity;
+      for (let i = 0; i < TOTAL_FRAMES; i++) {
+        if (!requestedStatus[i]) {
+          const dist = Math.abs(i - currentTargetFrame);
+          if (dist < minDistance) {
+            minDistance = dist;
+            closest = i;
+          }
+        }
+      }
+      return closest;
+    };
+
+    const scheduleNextLoads = () => {
+      if (!isMounted) return;
+      while (activeDownloads < MAX_CONCURRENT_DOWNLOADS) {
+        const nextIndex = getNextFrameToLoad();
+        if (nextIndex === null) break;
+        loadSingleFrame(nextIndex);
+      }
     };
 
     const handleResize = () => {
@@ -560,29 +664,8 @@ export default function Home() {
     handleResize();
     window.addEventListener("resize", handleResize);
 
-    // Load initial frame immediately
-    const firstImg = new Image();
-    firstImg.src = getFrameUrl(0);
-    images[0] = firstImg;
-    firstImg.onload = () => {
-      loadedStatus[0] = true;
-      if (lastRenderedFrame === -1) {
-        renderFrame(0);
-      }
-    };
-
-    // Sequential preload for remaining frames
-    for (let i = 1; i < TOTAL_FRAMES; i++) {
-      const img = new Image();
-      img.src = getFrameUrl(i);
-      images[i] = img;
-      img.onload = () => {
-        loadedStatus[i] = true;
-        if (Math.abs(currentTargetFrame - i) <= 1) {
-          renderFrame(currentTargetFrame);
-        }
-      };
-    }
+    // Start background progressive streaming immediately
+    scheduleNextLoads();
 
     // GSAP ScrollTrigger synchronization for entire page scroll with smooth 0.8s scrub
     const playhead = { frame: 0 };
@@ -607,6 +690,7 @@ export default function Home() {
     ScrollTrigger.refresh();
 
     return () => {
+      isMounted = false;
       window.removeEventListener("resize", handleResize);
       gsap.ticker.remove(tickerCb);
       lenis.destroy();
@@ -1284,6 +1368,24 @@ export default function Home() {
           </div>
         )}
       </div>
+
+      {/* Floating gentle loading pill while initial keyframes stream in */}
+      {!isReady && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-2.5 rounded-full bg-white/85 backdrop-blur-md border border-pink-200/80 shadow-[0_10px_30px_rgba(150,35,75,0.2)] transition-all duration-500 animate-fadeIn pointer-events-none select-none">
+          <span className="text-base animate-bounce">🌸</span>
+          <div className="flex flex-col">
+            <span className="text-xs font-vietnam font-bold text-[#541A38]">
+              Đang dệt hoa... {loadProgress}%
+            </span>
+            <div className="w-24 h-1 bg-pink-100 rounded-full overflow-hidden mt-1">
+              <div
+                className="h-full bg-gradient-to-r from-pink-400 to-rose-500 rounded-full transition-all duration-300"
+                style={{ width: `${loadProgress}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
