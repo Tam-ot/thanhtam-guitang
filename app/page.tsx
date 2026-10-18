@@ -1194,7 +1194,7 @@ export default function Home() {
                     color: "#3D0C22",
                     textShadow: "0 1px 12px rgba(255, 255, 255, 0.9), 0 2px 4px rgba(255, 255, 255, 0.7)",
                   }}
-                  className="font-handwritten-vn text-3xl sm:text-4xl font-bold tracking-wide"
+                  className="font-vietnam text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight"
                 >
                   Gửi người phụ nữ tuyệt vời
                 </p>
@@ -1299,7 +1299,7 @@ export default function Home() {
                 {/* Salutation / Title */}
                 <h3
                   style={{ color: "#4A102B" }}
-                  className="font-handwritten-vn text-2xl sm:text-3xl md:text-[32px] font-bold leading-snug mb-5"
+                  className="font-vietnam text-xl sm:text-2xl md:text-[26px] font-bold leading-snug mb-5 tracking-tight"
                 >
                   <span className="block sm:inline">Gửi bạn, </span>
                   <span className="inline-block">một người phụ nữ tuyệt vời ♡</span>
@@ -1352,7 +1352,7 @@ export default function Home() {
                 <div className="mt-8 pt-5 border-t border-pink-200/60 flex flex-col items-end text-right">
                   <p
                     style={{ color: "#7A2049" }}
-                    className="font-handwritten-vn text-xl sm:text-2xl font-semibold"
+                    className="font-vietnam text-base sm:text-lg font-semibold italic"
                   >
                     With love and the warmest wishes,
                   </p>
